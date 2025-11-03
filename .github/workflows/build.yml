@@ -2,9 +2,6 @@ name: Build uniCenta POS for macOS
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
 
 jobs:
   build:
@@ -23,17 +20,25 @@ jobs:
       - name: Build with Maven
         run: mvn clean package -DskipTests=true
 
-      - name: Create macOS .app bundle
+      - name: Show target folder content
+        run: ls -lah target
+
+      - name: Copy build output
         run: |
+          JAR_FILE=$(ls target/*.jar | head -n 1)
           mkdir -p build/unicentaPOS.app/Contents/MacOS
-          mkdir -p build/unicentaPOS.app/Contents/Resources
-          cp -r target/unicentaopos* build/unicentaPOS.app/Contents/MacOS/
-          echo '<?xml version="1.0" encoding="UTF-8"?>
+          cp "$JAR_FILE" build/unicentaPOS.app/Contents/MacOS/unicentaopos.jar
+
+      - name: Create Info.plist
+        run: |
+          mkdir -p build/unicentaPOS.app/Contents
+          cat <<EOF > build/unicentaPOS.app/Contents/Info.plist
+          <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
               <key>CFBundleExecutable</key>
-              <string>unicentaopos</string>
+              <string>java -jar unicentaopos.jar</string>
               <key>CFBundleIdentifier</key>
               <string>com.unicenta.pos</string>
               <key>CFBundleName</key>
@@ -41,7 +46,8 @@ jobs:
               <key>CFBundleVersion</key>
               <string>1.0</string>
           </dict>
-          </plist>' > build/unicentaPOS.app/Contents/Info.plist
+          </plist>
+          EOF
 
       - name: Archive app bundle
         run: zip -r unicentaPOS-macOS.zip build/unicentaPOS.app
