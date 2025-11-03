@@ -1,59 +1,36 @@
-name: Build uniCenta POS for macOS
+name: Build macOS App
 
 on:
-  workflow_dispatch:
+  push:
+  pull_request:
 
 jobs:
-  build:
+  build-macos:
     runs-on: macos-latest
 
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
 
-      - name: Build with Maven
-        run: mvn clean package -DskipTests=true
+    - name: Build project
+      run: mvn -B package --file pom.xml
 
-      - name: Show target folder content
-        run: ls -lah target
+    - name: Debug target folder
+      run: ls -al target
 
-      - name: Copy build output
-        run: |
-          JAR_FILE=$(ls target/*.jar | head -n 1)
-          mkdir -p build/unicentaPOS.app/Contents/MacOS
-          cp "$JAR_FILE" build/unicentaPOS.app/Contents/MacOS/unicentaopos.jar
+    - name: Create macOS .app bundle
+      run: |
+        mkdir -p build/unicentaPOS.app/Contents/MacOS
+        cp target/*.jar build/unicentaPOS.app/Contents/MacOS/
 
-      - name: Create Info.plist
-        run: |
-          mkdir -p build/unicentaPOS.app/Contents
-          cat <<EOF > build/unicentaPOS.app/Contents/Info.plist
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-              <key>CFBundleExecutable</key>
-              <string>java -jar unicentaopos.jar</string>
-              <key>CFBundleIdentifier</key>
-              <string>com.unicenta.pos</string>
-              <key>CFBundleName</key>
-              <string>uniCenta POS</string>
-              <key>CFBundleVersion</key>
-              <string>1.0</string>
-          </dict>
-          </plist>
-          EOF
-
-      - name: Archive app bundle
-        run: zip -r unicentaPOS-macOS.zip build/unicentaPOS.app
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: unicentaPOS-macOS
-          path: unicentaPOS-macOS.zip
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: unicenta-mac
+        path: build/unicentaPOS.app
