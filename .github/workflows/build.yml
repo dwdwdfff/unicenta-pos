@@ -1,36 +1,51 @@
-name: Build macOS App
+name: Build macOS App (uniCenta / Chromis)
 
 on:
-  push:
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   build-macos:
     runs-on: macos-latest
 
     steps:
-    - name: Checkout repository
+    - name: Checkout repo
       uses: actions/checkout@v4
 
-    - name: Setup Java
+    - name: Install Java & Maven
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '17'
+        java-version: '11'   # uniCenta/Chromis يحتاج Java 11
 
-    - name: Build project
-      run: mvn -B package --file pom.xml
+    - name: BUILD (Maven)
+      run: |
+        mvn -e -X -B clean package
+        echo "✅ Maven build done"
 
     - name: Debug target folder
-      run: ls -al target
+      run: |
+        echo "📂 Listing target folder"
+        ls -al target || echo "⚠️ target folder not found!"
+
+    - name: Find jar file
+      id: findjar
+      run: |
+        jarfile=$(find target -name "*.jar" | head -n 1)
+        if [ -z "$jarfile" ]; then
+          echo "❌ No JAR produced!"
+          exit 1
+        fi
+        echo "jar=$jarfile" >> $GITHUB_OUTPUT
+        echo "✅ Found jar → $jarfile"
 
     - name: Create macOS .app bundle
       run: |
         mkdir -p build/unicentaPOS.app/Contents/MacOS
-        cp target/*.jar build/unicentaPOS.app/Contents/MacOS/
+        cp "${{ steps.findjar.outputs.jar }}" build/unicentaPOS.app/Contents/MacOS/
+        echo "✅ Copied jar to app bundle"
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: unicenta-mac
+        name: unicenta-macos
         path: build/unicentaPOS.app
