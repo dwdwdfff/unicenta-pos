@@ -1,0 +1,37 @@
+name: Build Chromis POS for macOS
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v3
+
+    - name: Install Java
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Build Package
+      run: |
+        chmod +x ./gradlew
+        ./gradlew build
+
+    - name: Create macOS app bundle
+      run: |
+        mkdir ChromisPOS.app
+        mkdir ChromisPOS.app/Contents
+        mkdir ChromisPOS.app/Contents/MacOS
+        cp -r build/libs/* ChromisPOS.app/Contents/MacOS/
+
+    - name: Upload Mac App build
+      uses: actions/upload-artifact@v3
+      with:
+        name: ChromisPOS-mac
+        path: ChromisPOS.app
