@@ -1,37 +1,53 @@
-name: Build Chromis POS for macOS
+name: Build uniCenta POS for macOS
 
 on:
+  workflow_dispatch:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: macos-latest
 
     steps:
-    - name: Checkout source
-      uses: actions/checkout@v3
+      - name: Checkout source
+        uses: actions/checkout@v4
 
-    - name: Install Java
-      uses: actions/setup-java@v3
-      with:
-        java-version: '17'
-        distribution: 'temurin'
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-    - name: Build Package
-      run: |
-        chmod +x ./gradlew
-        ./gradlew build
+      - name: Build with Maven
+        run: mvn clean package -DskipTests=true
 
-    - name: Create macOS app bundle
-      run: |
-        mkdir ChromisPOS.app
-        mkdir ChromisPOS.app/Contents
-        mkdir ChromisPOS.app/Contents/MacOS
-        cp -r build/libs/* ChromisPOS.app/Contents/MacOS/
+      - name: Create macOS .app bundle
+        run: |
+          mkdir -p build/unicentaPOS.app/Contents/MacOS
+          mkdir -p build/unicentaPOS.app/Contents/Resources
+          cp -r target/unicentaopos* build/unicentaPOS.app/Contents/MacOS/
+          echo '<?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleExecutable</key>
+              <string>unicentaopos</string>
+              <key>CFBundleIdentifier</key>
+              <string>com.unicenta.pos</string>
+              <key>CFBundleName</key>
+              <string>uniCenta POS</string>
+              <key>CFBundleVersion</key>
+              <string>1.0</string>
+          </dict>
+          </plist>' > build/unicentaPOS.app/Contents/Info.plist
 
-    - name: Upload Mac App build
-      uses: actions/upload-artifact@v3
-      with:
-        name: ChromisPOS-mac
-        path: ChromisPOS.app
+      - name: Archive app bundle
+        run: zip -r unicentaPOS-macOS.zip build/unicentaPOS.app
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unicentaPOS-macOS
+          path: unicentaPOS-macOS.zip
